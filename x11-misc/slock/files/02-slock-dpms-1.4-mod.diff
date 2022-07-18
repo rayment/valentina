@@ -1,0 +1,79 @@
+From a2e796dad6c5b43c37d85567637f7dc614f943e2 Mon Sep 17 00:00:00 2001
+From: Finn Rayment <finn@rayment.fr>
+Date: Fri, 15 Jul 2022 13:49:50 +1000
+Subject: [PATCH 1/1] 02
+
+---
+ config.def.h |  3 +++
+ slock.c      | 20 ++++++++++++++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/config.def.h b/config.def.h
+index 25e0ed4..7877a1b 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -12,6 +12,9 @@ static const char *colorname[NUMCOLS] = {
+ /* treat a cleared input like a wrong password (color) */
+ static const int failonclear = 1;
+ 
++/* time in seconds before the monitor shuts down */
++static const int monitortime = 5;
++
+ static const int logosize = 75;
+ static const int logow = 12; /* Grid width and height for right center alignment*/
+ static const int logoh = 6;
+diff --git a/slock.c b/slock.c
+index 11509ae..8e2c5b6 100644
+--- a/slock.c
++++ b/slock.c
+@@ -16,6 +16,7 @@
+ #include <unistd.h>
+ #include <sys/types.h>
+ #include <X11/extensions/Xrandr.h>
++#include <X11/extensions/dpms.h>
+ #ifdef XINERAMA
+ #include <X11/extensions/Xinerama.h>
+ #endif
+@@ -384,6 +385,7 @@ main(int argc, char **argv) {
+ 	const char *hash;
+ 	Display *dpy;
+ 	int s, nlocks, nscreens;
++	CARD16 standby, suspend, off;
+ 
+ 	ARGBEGIN {
+ 	case 'v':
+@@ -498,6 +500,20 @@ main(int argc, char **argv) {
+ 	if (nlocks != nscreens)
+ 		return 1;
+ 
++	/* DPMS magic to disable the monitor */
++	if (!DPMSCapable(dpy))
++		die("slock: DPMSCapable failed\n");
++	if (!DPMSEnable(dpy))
++		die("slock: DPMSEnable failed\n");
++	if (!DPMSGetTimeouts(dpy, &standby, &suspend, &off))
++		die("slock: DPMSGetTimeouts failed\n");
++	if (!standby || !suspend || !off)
++		die("slock: at least one DPMS variable is zero\n");
++	if (!DPMSSetTimeouts(dpy, monitortime, monitortime, monitortime))
++		die("slock: DPMSSetTimeouts failed\n");
++
++	XSync(dpy, 0);
++
+ 	/* run post-lock command */
+ 	if (argc > 0) {
+ 		switch (fork()) {
+@@ -515,6 +531,10 @@ main(int argc, char **argv) {
+ 	/* everything is now blank. Wait for the correct password */
+ 	readpw(dpy, &rr, locks, nscreens, hash);
+ 
++	/* reset DPMS values to initial ones */
++	DPMSSetTimeouts(dpy, standby, suspend, off);
++	XSync(dpy, 0);
++
+ 	for (nlocks = 0, s = 0; s < nscreens; s++) {
+ 		XFreePixmap(dpy, locks[s]->drawable);
+ 		XFreeGC(dpy, locks[s]->gc);
+-- 
+2.35.1
+
