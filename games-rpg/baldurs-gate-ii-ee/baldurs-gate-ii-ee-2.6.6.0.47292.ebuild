@@ -21,7 +21,7 @@ RDEPEND="dev-libs/expat
 	x11-libs/libX11"
 BDEPEND="app-arch/unzip"
 
-QA_PRESTRIPPED="opt/${PN}/BaldursGate"
+QA_PRESTRIPPED="opt/${PN}/BaldursGateII"
 
 S="${WORKDIR}/data/noarch"
 
@@ -43,10 +43,10 @@ src_install() {
 
 	insinto "${dir}"
 	doins -r "game/."
-	fperms +x "${dir}/BaldursGate"
+	fperms +x "${dir}/BaldursGateII"
 
-	make_wrapper ${PN} "./BaldursGate" "${dir}"
+	make_wrapper ${PN} "./BaldursGateII" "${dir}"
 
 	newicon "support/icon.png" "${PN}.png"
-	make_desktop_entry "${PN}" "Baldur's Gate: Enhanced Edition" "${PN}"
+	make_desktop_entry "${PN}" "Baldur's Gate II: Enhanced Edition" "${PN}"
 }
